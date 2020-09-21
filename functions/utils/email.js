@@ -12,8 +12,6 @@ exports.sendMail = (req, res, data) => {
     cors(req, res, () => {
         const { accessToken, displayName, tempPassword, dest } = data;
 
-        console.log(data);
-
         const mailOptions = {
             from: "Your Account Name <yourgmailaccount@gmail.com>", // Something like: Jane Doe <janedoe@gmail.com>
             to: dest,
