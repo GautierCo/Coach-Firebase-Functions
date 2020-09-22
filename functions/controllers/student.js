@@ -1,4 +1,4 @@
-const { db } = require("../utils/admin");
+const { db, admin } = require("../utils/admin");
 const firebase = require("../utils/firebase");
 const generator = require("generate-password");
 const { firebaseConfig } = require("../utils/firebaseConfig");
@@ -52,7 +52,7 @@ exports.newStudent = (req, res) => {
                 });
         })
         .catch((err) => {
-            console.log("(NewStudent) Une erreur est survenue lors de la création d'un nouveau élève:", err);
+            console.log(err);
             if (err.code === "auth/email-already-in-use") {
                 return res.status(400).json({ message: "L'adresse email est déjà utilisée" });
             } else {
@@ -65,24 +65,50 @@ exports.newStudent = (req, res) => {
 };
 
 exports.editStudent = (req, res) => {
-    const userRequest = req.user;
-
-    const studentEditData = req.body;
+    const userRequest = req.user; // COACH ou STUDENT
+    //const studentEditData = req.body;
+    const { newPassword, newEmail, password_confirmation, ...rest } = req.body;
+    let finalData = {};
 
     db.collection("users")
-        .doc(studentEditData.uid)
+        .doc(req.body.uid)
         .get()
-        .then((data) => {
-            console.log("data", data.data());
+        .then(async (data) => {
             const user = data.data();
 
-            if (user.coachId !== userRequest.uid) {
-                return res.status(403).json("Ce n'est pas votre élève.");
+            if (userRequest.isCoach && user.coachId !== userRequest.uid) {
+                return res.json({ message: "Vous n'êtes pas le coach de cet élève" });
+            } else if (user.uid !== req.user.uid) {
+                return res.json({ message: "Vous n'êtes pas authentifié sous ce compte" });
+            }
+
+            if (newPassword || newEmail) {
+                await admin
+                    .auth()
+                    .updateUser(req.body.uid, {
+                        ...(newEmail && { email: newEmail }),
+                        ...(newPassword && { password: newPassword }),
+                    })
+                    .then(() => {
+                        if (newEmail) {
+                            finalData = {
+                                ...rest,
+                                email: newEmail,
+                            };
+                        }
+                        return res.status(201).json({ message: "L'étudiant a été mis à jour sur firebaseAuth" });
+                    })
+                    .catch((err) => {
+                        console.log("Error updating user:", err);
+                        return res.status(500).json({ message: err });
+                    });
+            } else {
+                finalData = { ...rest };
             }
 
             db.collection("users")
-                .doc(studentEditData.uid)
-                .update(studentEditData)
+                .doc(req.body.uid)
+                .update(finalData)
                 .then(() => {
                     return res.json({ message: "User updated data successfully" });
                 })
@@ -92,8 +118,9 @@ exports.editStudent = (req, res) => {
                 });
         })
         .catch((err) => {
+            console.error(err);
             res.status(500).json({
-                error: err.code,
+                error: err,
                 message: "Un problème est survenue lors de l'édition de l'élève par le coach",
             });
         });

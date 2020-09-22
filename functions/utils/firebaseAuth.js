@@ -60,6 +60,7 @@ exports.firebaseAuthCoach = (req, res, next) => {
         });
 };
 
+// Surement useless -> à virer plus tard
 exports.firebaseAuthCoachStudent = (req, res, next) => {
     let tokenId;
     if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
@@ -81,11 +82,7 @@ exports.firebaseAuthCoachStudent = (req, res, next) => {
 
                     const user = data.data();
 
-                    if (user.isCoach === false) {
-                        return res.json({ message: "Vous devez être Coach pour effectuer cette action" });
-                    } else {
-                        return next();
-                    }
+                    return next();
                 })
                 .catch((err) => {
                     console.error(err);

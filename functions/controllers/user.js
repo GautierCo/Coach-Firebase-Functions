@@ -90,3 +90,17 @@ exports.uploadImage = (req, res) => {
 
     busboy.end(req.rawBody);
 };
+
+exports.getAuthUser = (req, res) => {
+    db.collection("users")
+        .doc(req.user.uid)
+        .get()
+        .then((data) => {
+            console.log("data", data.data());
+            return res.json(data.data());
+        })
+        .catch((err) => {
+            console.error(err);
+            return res.status(500).json({ error: err });
+        });
+};

@@ -91,6 +91,9 @@ exports.ValidEditCoach = (req, res, next) => {
         email: "required|email",
         password: "string|min:6|max:30|confirmed",
         password_confirmation: "string|min:6|max:30",
+        newEmail: "required|email",
+        newPassword: "string|min:6|max:30|confirmed",
+        newPassword_confirmation: "string|min:6|max:30",
         firstname: "required|string|min:3|max:30",
         lastname: "required|string|min:3|max:30",
         pseudo: "string|min:3|max:30",
@@ -116,12 +119,15 @@ exports.ValidEditCoach = (req, res, next) => {
     });
 };
 
-// EDIT_COACH : Middleware
+// EDIT_STUDENT : Middleware
 exports.ValidEditStudent = (req, res, next) => {
     const validationRule = {
         email: "required|email",
         password: "string|min:6|max:30|confirmed",
         password_confirmation: "string|min:6|max:30",
+        newEmail: "required|email",
+        newPassword: "string|min:6|max:30|confirmed",
+        newPassword_confirmation: "string|min:6|max:30",
         firstname: "required|string|min:3|max:30",
         lastname: "required|string|min:3|max:30",
 

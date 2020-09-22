@@ -4,7 +4,7 @@ const app = require("express")();
 const { newCoach, editCoach } = require("./controllers/coach");
 const { getAllStudents, newStudent, editStudent } = require("./controllers/student");
 const { firebaseAuth, firebaseAuthCoach, firebaseAuthCoachStudent } = require("./utils/firebaseAuth"); // Middleware checkToken and role
-const { login, uploadImage } = require("./controllers/user");
+const { login, uploadImage, getAuthUser } = require("./controllers/user");
 const {
     ValidSignupCoach,
     ValidEditCoach,
@@ -22,11 +22,10 @@ app.post("/student", firebaseAuthCoach, ValidSignupStudent, newStudent);
 app.post("/student/edit", firebaseAuthCoachStudent, ValidEditStudent, editStudent);
 app.get("/students", firebaseAuthCoach, getAllStudents);
 
-// Common routes
-app.post("/login", ValidLogin, login);
-
 // User (Coach & Student)
+app.post("/login", ValidLogin, login);
 app.post("/user/image", firebaseAuth, uploadImage);
+app.get("/user", firebaseAuth, getAuthUser);
 
 exports.api = functions.region("europe-west1").https.onRequest(app);
 
@@ -35,9 +34,6 @@ exports.api = functions.region("europe-west1").https.onRequest(app);
 // GET PROFILE OF STUDENT (middleware coach)
 
 // #Coach
-
-// EDIT COACH ACCOUNT (email, password, phone, firstname, lastname)
-// EDIT COACH DETAILS (others details)
 
 // ADD FORMULE
 // EDIT FORMULE

@@ -1,10 +1,6 @@
-const { db } = require("../utils/admin");
+const { db, admin } = require("../utils/admin");
 const firebase = require("../utils/firebase");
 const { firebaseConfig } = require("../utils/firebaseConfig");
-const generator = require("generate-password");
-const { sendMail } = require("../utils/email");
-const { validateSignupData } = require("../utils/validations");
-const admin = require("../utils/admin");
 
 // add avatarUrl with default image
 
@@ -70,13 +66,39 @@ exports.newCoach = (req, res) => {
         });
 };
 
-exports.editCoach = (req, res) => {
+exports.editCoach = async (req, res) => {
     const userRequest = req.user;
-    const coachEditData = req.body;
+
+    const { password: newPassword, newEmail, password_confirmation, ...rest } = req.body;
+    let finalData = {};
+
+    if (newPassword || newEmail) {
+        await admin
+            .auth()
+            .updateUser(userRequest.uid, {
+                ...(newEmail && { email: newEmail }),
+                ...(newPassword && { password: newPassword }),
+            })
+            .then(() => {
+                if (newEmail) {
+                    finalData = {
+                        ...rest,
+                        email: newEmail,
+                    };
+                }
+                return res.status(201).json({ message: "Le coach a été mis à jour sur firebaseAuth" });
+            })
+            .catch((err) => {
+                console.log("Error updating user:", err);
+                return res.status(500).json({ message: err });
+            });
+    } else {
+        finalData = { ...rest };
+    }
 
     db.collection("users")
         .doc(userRequest.uid)
-        .update(coachEditData)
+        .update(finalData)
         .then(() => {
             return res.json({ message: "Coach updated data successfully" });
         })
