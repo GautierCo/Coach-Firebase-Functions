@@ -171,8 +171,8 @@ exports.ValidNewExercice = (req, res, next) => {
         advice: "string|min:3|max:5000",
         nbrRep: ["integer", { digits_between: [1, 4] }],
         nbrSerie: ["integer", { digits_between: [1, 4] }],
+        restTime: ["integer", { digits_between: [1, 4] }], // temps de repos en seconde
         weight: ["integer", { digits_between: [1, 3] }],
-        //trainingId: "required|string",
     };
     validator(req.body, validationRule, {}, (err, status) => {
         if (!status) {

@@ -10,12 +10,6 @@ const imageByDefaultUrl = `https://firebasestorage.googleapis.com/v0/b/${firebas
 exports.newCoach = (req, res) => {
     const { email, password, firstname, lastname } = req.body;
 
-    //const { valid, errors } = validateSignupData(req.body);
-
-    //console.log(req, req.errors);
-
-    //if (!valid) return res.status(400).json({ errors });
-
     let token;
     let newCoachUid;
     firebase
@@ -131,6 +125,47 @@ exports.newExercice = (req, res) => {
         });
 };
 
+/** @POST - Edit exercice by Id : **/
+exports.editExercice = (req, res) => {
+    if (!req.params.exerciceId) {
+        return res.status(400).json({ message: "Vous devez avoir en paramètre exerciceId" });
+    }
+
+    const exerciceData = req.body;
+    const { exerciceId } = req.params;
+
+    db.collection("exercices")
+        .doc(exerciceId)
+        .update(exerciceData)
+        .then(() => {
+            res.json(`L'exercice ${exerciceId} a bien été mis à jour`);
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).json({ error: err });
+        });
+};
+
+/** @DELETE - Delete exercice by Id : **/
+exports.deleteExercice = (req, res) => {
+    if (!req.params.exerciceId) {
+        return res.status(400).json({ message: "Vous devez avoir en paramètre exerciceId" });
+    }
+
+    const { exerciceId } = req.params;
+
+    db.collection("exercices")
+        .doc(exerciceId)
+        .delete()
+        .then(() => {
+            res.json(`L'exercice ${exerciceId} a bien été supprimé`);
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).json({ error: err });
+        });
+};
+
 /** @POST - Add training : **/
 exports.newTraining = (req, res) => {
     const trainingData = {
@@ -150,6 +185,47 @@ exports.newTraining = (req, res) => {
         .catch((err) => {
             console.error(err);
             return res.status(500).json({ error: err });
+        });
+};
+
+/** @POST - Edit training by Id : **/
+exports.editTraining = (req, res) => {
+    if (!req.params.trainingId) {
+        return res.status(400).json({ message: "Vous devez avoir en paramètre trainingId" });
+    }
+
+    const trainingData = req.body;
+    const { trainingId } = req.params;
+
+    db.collection("trainings")
+        .doc(trainingId)
+        .update(trainingData)
+        .then(() => {
+            res.json(`Le training ${trainingId} a bien été mis à jour`);
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).json({ error: err });
+        });
+};
+
+/** @DELETE - Delete training by Id : **/
+exports.deleteTraining = (req, res) => {
+    if (!req.params.trainingId) {
+        return res.status(400).json({ message: "Vous devez avoir en paramètre trainingId" });
+    }
+
+    const { trainingId } = req.params;
+
+    db.collection("trainings")
+        .doc(trainingId)
+        .delete()
+        .then(() => {
+            res.json(`Le training ${trainingId} a bien été supprimé`);
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).json({ error: err });
         });
 };
 

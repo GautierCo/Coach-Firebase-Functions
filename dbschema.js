@@ -58,6 +58,7 @@ let database = {
             name: "Développer coucher",
             nbrRep: 10,
             nbrSerie: 5,
+            restTime: 60, //(secondes)
             trainingId: "91dufqbCN2yQ5eoQ0Ako",
             exerciceId: "rzaagY67W2y6vyRrNTOs",
             weight: 15,

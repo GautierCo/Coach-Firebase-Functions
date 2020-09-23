@@ -7,6 +7,7 @@ const { sendMail } = require("../utils/email");
 const imageByDefault = "blank-profile.png";
 const imageByDefaultUrl = `https://firebasestorage.googleapis.com/v0/b/${firebaseConfig.storageBucket}/o/${imageByDefault}?alt=media`;
 
+/** @POST - Signup a new student : **/
 exports.newStudent = (req, res) => {
     const { firstname, lastname, email } = req.body;
 
@@ -64,6 +65,7 @@ exports.newStudent = (req, res) => {
         });
 };
 
+/** @POST - Edit student infos : **/
 exports.editStudent = (req, res) => {
     const userRequest = req.user; // COACH ou STUDENT
     //const studentEditData = req.body;
@@ -126,6 +128,7 @@ exports.editStudent = (req, res) => {
         });
 };
 
+/** @GET - Get all students : **/
 exports.getAllStudents = (req, res) => {
     const { coachid } = req.query;
 
