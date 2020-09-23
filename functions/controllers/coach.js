@@ -2,11 +2,11 @@ const { db, admin } = require("../utils/admin");
 const firebase = require("../utils/firebase");
 const { firebaseConfig } = require("../utils/firebaseConfig");
 
-// add avatarUrl with default image
-
+// avatarUrl with default image on signup
 const imageByDefault = "blank-profile.png";
 const imageByDefaultUrl = `https://firebasestorage.googleapis.com/v0/b/${firebaseConfig.storageBucket}/o/${imageByDefault}?alt=media`;
 
+/** @POST - Signup a new coach : **/
 exports.newCoach = (req, res) => {
     const { email, password, firstname, lastname } = req.body;
 
@@ -66,6 +66,7 @@ exports.newCoach = (req, res) => {
         });
 };
 
+/** @POST - Edit coach infos : **/
 exports.editCoach = async (req, res) => {
     const userRequest = req.user;
 
@@ -105,5 +106,128 @@ exports.editCoach = async (req, res) => {
         .catch((err) => {
             console.error(err);
             return res.status(500).json({ error: err.code, message: "Error when Coach updated data" });
+        });
+};
+
+/** @POST - Add exercice : **/
+exports.newExercice = (req, res) => {
+    const exerciceData = {
+        ...req.body,
+        coachId: req.user.uid,
+    };
+
+    db.collection("exercices")
+        .add(exerciceData)
+        .then((doc) => {
+            const exerciceId = doc.id;
+            exerciceData.exerciceId = exerciceId;
+
+            return res.json(exerciceData);
+        })
+        .catch((err) => {
+            console.error(err);
+            return res.status(500).json({ error: err });
+        });
+};
+
+/** @POST - Add training : **/
+exports.newTraining = (req, res) => {
+    const trainingData = {
+        ...req.body,
+        coachId: req.user.uid,
+    };
+
+    db.collection("trainings")
+        .add(trainingData)
+        .then((doc) => {
+            const trainingId = doc.id;
+            trainingData.trainingId = trainingId;
+
+            return res.json(trainingData);
+        })
+        .catch((err) => {
+            console.error(err);
+            return res.status(500).json({ error: err });
+        });
+};
+
+/** @POST - Add exercice(s) to training : **/
+exports.addExerciceToTraining = (req, res) => {
+    if (!req.params.trainingId) {
+        return res.status(400).json({ message: "Vous devez avoir en paramètre le trainingId" });
+    }
+
+    if (!req.body.exercicesId || !Array.isArray(req.body.exercicesId)) {
+        return res.status(400).json({ message: "exercicesId doit être un tableau" });
+    }
+
+    const trainingId = req.params.trainingId;
+    const { exercicesId } = req.body; // ['exercice_id_1', 'exercice_id_2', ...] || ['exercice_id']
+
+    db.collection("trainings")
+        .doc(trainingId)
+        .get()
+        .then((doc) => {
+            if (!doc.exists) {
+                return res.json({ error: `Le training ${trainingId} est introuvable` });
+            }
+            return doc.ref.update({ exercicesId: admin.firestore.FieldValue.arrayUnion(...exercicesId) });
+        })
+        .then(() => {
+            return res.json({ message: `Les exercices ont bien été ajouté au training ${trainingId}` });
+        })
+        .catch((err) => {
+            console.error(err);
+            return res.status(500).json({ error: err });
+        });
+};
+
+/** @POST - Add training to student : **/
+exports.addTrainingToStudent = (req, res) => {
+    if (!req.params.trainingId) {
+        return res.status(400).json({ message: "Vous devez avoir en paramètre le trainingId" });
+    }
+
+    if (!req.body.studentId) {
+        return res.status(400).json({ message: "Vous devez renseigner studentId" });
+    }
+
+    let trainingId = req.params.trainingId;
+    const { studentId } = req.body;
+
+    trainingId = [trainingId]; // Need to be an array for use arrayUnion
+
+    db.collection("users")
+        .doc(studentId)
+        .get()
+        .then((doc) => {
+            if (!doc.exists) {
+                return res.json({ error: `L'utilisateur ${studentId} est introuvable` });
+            }
+            return doc.ref.update({ trainingsId: admin.firestore.FieldValue.arrayUnion(...trainingId) });
+        })
+        .then(() => {
+            return res.json({ message: `Le training ${trainingId} a bien été ajouté au à l'élève ${studentId}` });
+        })
+        .catch((err) => {
+            console.error(err);
+            return res.status(500).json({ error: err });
+        });
+};
+
+/** @GET - Get all exercices */
+exports.getAllExercices = (req, res) => {
+    const coachId = req.user.uid;
+
+    db.collection("exercices")
+        .where("coachId", "==", coachId)
+        .get()
+        .then((querySnapshot) => {
+            querySnapshot.forEach((doc) => {
+                console.log(doc.data());
+            });
+        })
+        .catch((err) => {
+            console.error(err);
         });
 };

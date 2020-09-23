@@ -24,12 +24,16 @@ exports.login = (req, res) => {
                 })
                 .catch((err) => {
                     console.error(err);
+                    return res.json({ error: err });
                 });
         })
         .catch((err) => {
             console.error(err);
-            if (err.code === "auth/wrong-password" || err.code === "auth/user-not-found")
+            if (err.code === "auth/wrong-password" || err.code === "auth/user-not-found") {
                 return res.status(403).json({ message: "Adresse email ou mot de passe incorrect" });
+            } else {
+                return res.status(500).json({ error: err });
+            }
         });
 };
 
@@ -80,12 +84,17 @@ exports.uploadImage = (req, res) => {
                     })
                     .catch((err) => {
                         console.error(err);
-                        return res
-                            .status(500)
-                            .json({ message: "Une erreur est survenue lors de l'enregistrement de l'avatar" });
+                        return res.status(500).json({
+                            message: "Une erreur est survenue lors de l'enregistrement de l'avatar",
+                            error: err,
+                        });
                     });
             })
-            .catch((err) => {});
+            .catch((err) => {
+                return res.status(500).json({
+                    error: err,
+                });
+            });
     });
 
     busboy.end(req.rawBody);
@@ -96,7 +105,6 @@ exports.getAuthUser = (req, res) => {
         .doc(req.user.uid)
         .get()
         .then((data) => {
-            console.log("data", data.data());
             return res.json(data.data());
         })
         .catch((err) => {
