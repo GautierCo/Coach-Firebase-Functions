@@ -114,6 +114,7 @@ exports.newExercice = (req, res) => {
     const exerciceData = {
         ...req.body,
         coachId: req.user.uid,
+        createdAt: new Date().toISOString(),
     };
 
     db.collection("exercices")
@@ -135,6 +136,7 @@ exports.newTraining = (req, res) => {
     const trainingData = {
         ...req.body,
         coachId: req.user.uid,
+        createdAt: new Date().toISOString(),
     };
 
     db.collection("trainings")
@@ -218,16 +220,80 @@ exports.addTrainingToStudent = (req, res) => {
 /** @GET - Get all exercices */
 exports.getAllExercices = (req, res) => {
     const coachId = req.user.uid;
-
+    let allExercices = [];
     db.collection("exercices")
         .where("coachId", "==", coachId)
+        .orderBy("createdAt", "desc")
         .get()
         .then((querySnapshot) => {
             querySnapshot.forEach((doc) => {
-                console.log(doc.data());
+                allExercices.push({ ...doc.data(), exerciceId: doc.id });
             });
+            return res.json({ exercices: allExercices });
         })
         .catch((err) => {
             console.error(err);
+            res.status(500).json({ error: err });
+        });
+};
+
+/** @GET - Get all training */
+exports.getAllTrainings = (req, res) => {
+    const coachId = req.user.uid;
+    let allTrainings = [];
+    db.collection("trainings")
+        .where("coachId", "==", coachId)
+        .orderBy("createdAt", "desc")
+        .get()
+        .then((querySnapshot) => {
+            querySnapshot.forEach((doc) => {
+                allTrainings.push({ ...doc.data(), trainingId: doc.id });
+            });
+            return res.json({ trainings: allTrainings });
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).json({ error: err });
+        });
+};
+
+/** @GET - Get one training with exercices */
+exports.getOneTraining = (req, res) => {
+    if (!req.params.trainingId) {
+        return res.status(400).json({ message: "Vous devez avoir en paramètre le trainingId" });
+    }
+    const trainingId = req.params.trainingId;
+    let training = {};
+    let exercices = [];
+
+    db.collection("trainings")
+        .doc(trainingId)
+        .get()
+        .then((dataTraining) => {
+            const { exercicesId, ...rest } = dataTraining.data();
+            training = { ...rest };
+
+            db.collection("exercices")
+                .where("trainingId", "==", trainingId)
+                .orderBy("createdAt", "desc")
+                .get()
+                .then((querySnapshot) => {
+                    querySnapshot.forEach((doc) => {
+                        exercices.push({ ...doc.data(), exerciceId: doc.id });
+                    });
+                    training = {
+                        ...training,
+                        exercices,
+                    };
+                    return res.json(training);
+                })
+                .catch((err) => {
+                    console.error(err);
+                    res.status(500).json({ error: err });
+                });
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).json({ error: err });
         });
 };

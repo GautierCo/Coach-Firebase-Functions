@@ -9,10 +9,12 @@ const {
     addExerciceToTraining,
     addTrainingToStudent,
     getAllExercices,
-} = require("./controllers/coach"); // Coach handlers
+    getAllTrainings,
+    getOneTraining,
+} = require("./controllers/coach"); // Coach controllers
 const { getAllStudents, newStudent, editStudent } = require("./controllers/student");
 const { firebaseAuth, firebaseAuthCoach, firebaseAuthCoachStudent } = require("./utils/firebaseAuth"); // Middlewares checkToken and role
-const { login, uploadImage, getAuthUser } = require("./controllers/user"); // Student handlers
+const { login, uploadImage, getAuthUser } = require("./controllers/user"); // Student controllers
 const {
     ValidSignupCoach,
     ValidEditCoach,
@@ -32,6 +34,8 @@ app.post("/coach/training/:trainingId/exercice", firebaseAuthCoach, addExerciceT
 app.post("/coach/training/:trainingId/student", firebaseAuthCoach, addTrainingToStudent);
 
 app.get("/coach/exercices", firebaseAuthCoach, getAllExercices);
+app.get("/coach/trainings", firebaseAuthCoach, getAllTrainings);
+app.get("/coach/training/:trainingId", firebaseAuthCoach, getOneTraining); // With exercices
 
 // Student routes
 app.post("/student", firebaseAuthCoach, ValidSignupStudent, newStudent);
@@ -43,11 +47,9 @@ app.post("/login", ValidLogin, login);
 app.post("/user/image", firebaseAuth, uploadImage);
 app.get("/user", firebaseAuth, getAuthUser);
 
-// TODO
-
-//app.get("/exercices/:coachid", firebaseAuth, getAllExercices);
-
 exports.api = functions.region("europe-west1").https.onRequest(app);
+
+// TODO
 
 // #Student
 

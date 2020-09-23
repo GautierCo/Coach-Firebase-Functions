@@ -1,5 +1,3 @@
-// Middlewares validate data
-
 const validator = require("./validatorInit");
 
 // SIGNUP_COACH
