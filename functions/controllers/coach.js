@@ -239,8 +239,9 @@ exports.addExerciceToTraining = (req, res) => {
         return res.status(400).json({ message: "exercicesId doit être un tableau" });
     }
 
-    let { trainingId } = req.params;
+    const { trainingId } = req.params;
     const { exercicesId } = req.body; // ['exercice_id_1', 'exercice_id_2', ...] || ['exercice_id']
+    const trainingIdArray = [trainingId];
     let batch = db.batch();
 
     db.collection("trainings")
@@ -250,22 +251,71 @@ exports.addExerciceToTraining = (req, res) => {
             if (!doc.exists) {
                 return res.json({ error: `Le training ${trainingId} est introuvable` });
             }
+            // Add exercicesId to training document
             return doc.ref.update({ exercicesId: admin.firestore.FieldValue.arrayUnion(...exercicesId) });
         })
         .then(() => {
-            console.log("exercicesId", exercicesId);
             return db.collection("exercices").where("exerciceId", "in", exercicesId).get();
         })
         .then((docs) => {
             // Add trainingId for each exerciceId in training collection.
             docs.forEach((doc) => {
-                console.log(doc.id);
-                batch.update(doc.ref, { trainingsId: admin.firestore.FieldValue.arrayUnion(...trainingId) });
+                batch.update(doc.ref, { trainingsId: admin.firestore.FieldValue.arrayUnion(...trainingIdArray) });
             });
             return batch.commit();
         })
         .then(() => {
-            return res.json({ message: `Les exercices ont bien été ajouté au training ${trainingId}` });
+            return res.json({
+                message: `Les exercices ${exercicesId.join(",")} ont bien été ajouté au training ${trainingId}`,
+            });
+        })
+        .catch((err) => {
+            console.error(err);
+            return res.status(500).json({ error: err });
+        });
+};
+
+/** @DELETE - Delete exercice(s) of training : **/
+exports.deleteExerciceOfTraining = (req, res) => {
+    if (!req.params.trainingId) {
+        return res.status(400).json({
+            message: "Vous devez avoir en paramètre le trainingId",
+        });
+    }
+
+    if (!req.body.exercicesId || !Array.isArray(req.body.exercicesId)) {
+        return res.status(400).json({
+            message: "exercicesId doit être un tableau ['exercice_id_1', 'exercice_id_2', ...] || ['exercice_id']",
+        });
+    }
+
+    const { trainingId } = req.params; // "AZE4d4D5d54SQ5F4"
+    const { exercicesId } = req.body; // ['exercice_id_1', 'exercice_id_2', ...] || ['exercice_id']
+    const trainingIdArray = [trainingId];
+    let batch = db.batch();
+
+    db.collection("exercices")
+        .where("exerciceId", "in", exercicesId)
+        .get()
+        .then((docs) => {
+            // Delete exerciceId for each exercice document who have this trainingId .
+            docs.forEach((doc) => {
+                batch.update(doc.ref, { trainingsId: admin.firestore.FieldValue.arrayRemove(...trainingIdArray) });
+            });
+            return db.collection("trainings").doc(trainingId).get();
+        })
+        .then((doc) => {
+            if (!doc.exists) {
+                return res.json({ error: `Le training ${trainingId} est introuvable` });
+            }
+            // Delete exercicesId in trainings documents. (Les exercices ont plusieurs trainings)
+            return doc.ref.update({ exercicesId: admin.firestore.FieldValue.arrayRemove(...exercicesId) });
+        })
+        .then(() => {
+            batch.commit();
+            return res.json({
+                message: `Les exercices ont bien été ${exercicesId.join(",")} supprimé du training ${trainingId}`,
+            });
         })
         .catch((err) => {
             console.error(err);
@@ -303,6 +353,35 @@ exports.addTrainingToStudent = (req, res) => {
         .catch((err) => {
             console.error(err);
             return res.status(500).json({ error: err });
+        });
+};
+
+/** @DELETE - Delete training of student */
+exports.deleteTrainingOfStudent = (req, res) => {
+    if (!req.params.trainingId) {
+        return res.status(400).json({
+            message: "Vous devez avoir en paramètre le trainingId",
+        });
+    }
+
+    if (!req.params.studentId) {
+        return res.status(400).json({
+            message: "studentId ne doit pas être vide pour supprimer un training",
+        });
+    }
+
+    const { trainingId, studentId } = req.params;
+    const trainingIdArray = [trainingId];
+
+    db.collection("students")
+        .doc(studentId)
+        .update({ trainingsId: admin.firestore.FieldValue.arrayRemove(...trainingIdArray) })
+        .then(() => {
+            res.json({ message: `Le trainingId ${trainingId} a bien été supprimé de l'élève ${studentId}` });
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).json({ error: err });
         });
 };
 
@@ -386,8 +465,6 @@ exports.getOneTraining = (req, res) => {
             res.status(500).json({ error: err });
         });
 };
-
-// Remove
 
 // Add exercice by day
 /* 

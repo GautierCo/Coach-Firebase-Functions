@@ -18,6 +18,8 @@ const {
     editTraining,
     deleteExercice,
     deleteTraining,
+    deleteExerciceOfTraining,
+    deleteTrainingOfStudent,
 } = require("./controllers/coach"); // Coach controllers
 const {
     ValidSignupCoach,
@@ -32,15 +34,21 @@ const {
 // Coach routes
 /** @POST Coach routes */
 app.post("/coach", ValidSignupCoach, newCoach); // Coach signup
-app.post("/coach/exercice", firebaseAuthCoach, ValidNewExercice, newExercice); // Coach add new exercice
-app.post("/coach/training", firebaseAuthCoach, ValidNewTraining, newTraining); // Coach add training
 app.post("/coach/edit", firebaseAuthCoach, ValidEditCoach, editCoach); // Coach edit infos
-app.post("/coach/training/:trainingId/exercice", firebaseAuthCoach, addExerciceToTraining); // Coach add exercice(s) to training
-app.post("/coach/training/:trainingId/student", firebaseAuthCoach, addTrainingToStudent); // Coach add training to student
+
+app.post("/coach/exercice", firebaseAuthCoach, ValidNewExercice, newExercice); // Coach add new exercice
 app.post("/coach/exercice/:exerciceId/edit", firebaseAuthCoach, ValidNewExercice, editExercice); // Coach edit exercice by ID
-app.post("/coach/training/:trainingId/edit", firebaseAuthCoach, ValidNewTraining, editTraining); // Coach edit training by ID
 app.delete("/coach/exercice/:exerciceId", firebaseAuthCoach, deleteExercice); // Coach delete exercice by ID
+
+app.post("/coach/training", firebaseAuthCoach, ValidNewTraining, newTraining); // Coach add training
+app.post("/coach/training/:trainingId/edit", firebaseAuthCoach, ValidNewTraining, editTraining); // Coach edit training by ID
 app.delete("/coach/training/:trainingId", firebaseAuthCoach, deleteTraining); // Coach delete training by ID
+
+app.post("/coach/training/:trainingId/exercice", firebaseAuthCoach, addExerciceToTraining); // Coach add exercice(s) to training
+app.delete("/coach/training/:trainingId/exercice/:exerciceId", firebaseAuthCoach, deleteExerciceOfTraining); // Coach delete exercice(s) of training
+
+app.post("/coach/training/:trainingId/student", firebaseAuthCoach, addTrainingToStudent); // Coach add training to student
+app.delete("/coach/training/:trainingId/student/:studentId", firebaseAuthCoach, deleteTrainingOfStudent); // Coach delete training of student
 
 /** @GET Coach routes */
 app.get("/coach/exercices", firebaseAuthCoach, getAllExercices); // Get all exercices by coachId
@@ -86,25 +94,34 @@ exports.onDeleteExercice = functions
             });
     });
 
-// When coach delete training, we need to delete all trainingId in exercices
+// When coach delete training, we need to delete all trainingId in exercices and user (STUDENT)
 exports.onDeleteTraining = functions
     .region("europe-west1")
     .firestore.document("/trainings/{trainingId}")
     .onDelete((snapshot, context) => {
-        let trainingId = context.params.trainingId;
+        const trainingId = context.params.trainingId;
+        const trainingIdArray = [trainingId];
         const batch = db.batch();
 
         return db
-            .collection("trainings")
-            .where("exercicesId", "array-contains", trainingId)
+            .collection("exercices")
+            .where("trainingsId", "array-contains", trainingId)
             .get()
             .then((querySnapshot) => {
                 // Delete all trainingId in trainings who have this trainingId
-                trainingId = [trainingId];
                 querySnapshot.forEach((doc) => {
-                    batch.update(doc.ref, { trainingsId: admin.firestore.FieldValue.arrayRemove(...trainingId) });
+                    batch.update(doc.ref, { trainingsId: admin.firestore.FieldValue.arrayRemove(...trainingIdArray) });
                 });
                 console.log(`Training have been delete in training`);
+
+                return db.collection("users").where("trainingsId", "array-contains", trainingId).get();
+            })
+            .then((querySnapshot) => {
+                // Delete all trainingId in users(student) who have this trainingId
+                querySnapshot.forEach((doc) => {
+                    batch.update(doc.ref, { trainingsId: admin.firestore.FieldValue.arrayRemove(...trainingIdArray) });
+                });
+                console.log(`Training have been delete in user(student)`);
                 return batch.commit();
             })
             .catch((err) => {
@@ -130,6 +147,28 @@ exports.onAddExercice = functions
                 console.error(err);
             });
     });
+
+// On add new exercice we add exerciceId in the document of this exercice. // A check
+exports.onAddTraining = functions
+    .region("europe-west1")
+    .firestore.document("/trainings/{trainingId}")
+    .onCreate((snapshot, context) => {
+        let trainingId = context.params.trainingId;
+        const batch = db.batch();
+        return db
+            .collection("trainings")
+            .doc(trainingId)
+            .update({ trainingId: trainingId })
+            .then(() => {
+                return batch.commit();
+            })
+            .catch((err) => {
+                console.error(err);
+            });
+    });
+
+// Il va falloir faire un triggers lorsque l'on supprime un exercice d'un training
+// Il va falloir faire un triggers lorsque l'on supprime un training d'un étudiant
 
 /*
     quand j'ajoute un nouveau exercice j'ajoute son exerciceId
