@@ -239,8 +239,9 @@ exports.addExerciceToTraining = (req, res) => {
         return res.status(400).json({ message: "exercicesId doit être un tableau" });
     }
 
-    const trainingId = req.params.trainingId;
+    let { trainingId } = req.params;
     const { exercicesId } = req.body; // ['exercice_id_1', 'exercice_id_2', ...] || ['exercice_id']
+    let batch = db.batch();
 
     db.collection("trainings")
         .doc(trainingId)
@@ -250,6 +251,18 @@ exports.addExerciceToTraining = (req, res) => {
                 return res.json({ error: `Le training ${trainingId} est introuvable` });
             }
             return doc.ref.update({ exercicesId: admin.firestore.FieldValue.arrayUnion(...exercicesId) });
+        })
+        .then(() => {
+            console.log("exercicesId", exercicesId);
+            return db.collection("exercices").where("exerciceId", "in", exercicesId).get();
+        })
+        .then((docs) => {
+            // Add trainingId for each exerciceId in training collection.
+            docs.forEach((doc) => {
+                console.log(doc.id);
+                batch.update(doc.ref, { trainingsId: admin.firestore.FieldValue.arrayUnion(...trainingId) });
+            });
+            return batch.commit();
         })
         .then(() => {
             return res.json({ message: `Les exercices ont bien été ajouté au training ${trainingId}` });
@@ -350,7 +363,7 @@ exports.getOneTraining = (req, res) => {
             training = { ...rest };
 
             db.collection("exercices")
-                .where("trainingId", "==", trainingId)
+                .where("trainingsId", "array-contains", trainingId)
                 .orderBy("createdAt", "desc")
                 .get()
                 .then((querySnapshot) => {
@@ -373,3 +386,19 @@ exports.getOneTraining = (req, res) => {
             res.status(500).json({ error: err });
         });
 };
+
+// Remove
+
+// Add exercice by day
+/* 
+
+lundi: [exercice_id1, exercice_id2]
+
+et quand on get on transforme en 
+
+exerciceByDay: {
+    lundi {
+        allExercices
+    }
+}
+*/
